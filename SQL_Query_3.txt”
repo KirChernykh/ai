@@ -1,0 +1,29 @@
+DROP TABLE IF EXISTS #sales
+
+SELECT [Customer Key]
+		,DATEPART(q,[Invoice Date Key]) as Quarter
+		,DATEPART(yy,[Invoice Date Key]) as Year
+		,SUM(Quantity*[Unit Price]) as SalesRevenue 
+		,1.00*SUM(Quantity) as SalesQuantity
+INTO #sales
+FROM [Fact].[Sale]
+GROUP BY [Customer Key]
+		,DATEPART(q,[Invoice Date Key])
+		,DATEPART(yy,[Invoice Date Key])
+
+SELECT Customer as CustomerName
+		, SalesRevenue / NULLIF(TotalSales,0) * 100 as TotalRevenuePercentage
+		, SalesQuantity / NULLIF(TotalQuantity,0) * 100 as TotalQuantityPercentage
+		, f.Quarter
+		, f.Year
+FROM 
+(SELECT Quarter
+		, Year
+		, SUM(SalesRevenue) as TotalSales
+		, SUM(SalesQuantity) as TotalQuantity
+FROM #sales
+GROUP BY Quarter
+		, Year) f
+JOIN #sales s ON f.Quarter = s.Quarter 
+			AND f.Year = s.Year
+JOIN Dimension.Customer c ON c.[Customer Key] = s.[Customer Key]
